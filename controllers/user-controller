@@ -1,0 +1,94 @@
+const express = require("express");
+const bcrypt = require("bcryptjs");
+
+const User = require("../models/User"); // jis naam se export ho mongoose.model("User",userSchema); "User" ke karan yaha User aaya
+
+exports.getAllUser = async(req,res,next)=>{
+    let users;
+    try{
+        users = await User.find();
+    }catch(error){ 
+        return console.log(error);
+    }
+
+    if(!users){
+        return res.status(404).json({
+            success:false,
+            message:"User Not Found"
+        })
+    }
+
+    return res.status(200).json({
+        success:true,
+        message:"DATA FOUND",
+        users
+    })
+}
+
+
+exports.signup = async(req,res,next) =>{
+    let existingUser;
+    
+    const {username,email,password} = req.body;
+        console.log(username,email,password);
+    try{
+        existingUser = await User.findOne({email});
+    }catch(err){
+        console.log("Kuch galat h bhaiya");
+        return console.log(err);
+    }
+
+    if(existingUser){
+        console.log("user already exist");
+        return res.status(500).json({
+            message:"User already exist"
+        })
+    }
+    const hasedPassword = bcrypt.hashSync(password);
+    const user = new User({
+        username,
+        email,
+        password:hasedPassword,
+        blogs:[]
+    })
+
+    try{
+       await user.save();
+    }catch(err){
+        console.log("daal me kuch kala h");
+       return  console.log(err);
+    }
+    console.log("USER SignUp SuccessFully")
+    return res.status(201).json({user});
+}
+
+exports.login = async(req,res,next) =>{
+    let existingUser;
+    
+    const {email,password} = req.body;
+        console.log(email,password);
+    try{
+        existingUser = await User.findOne({email});
+        console.log("MIL GYA USER");
+    }catch(err){
+        console.log("Kuch galat h bhaiya");
+        return console.log(err);
+    }
+
+    if(!existingUser){
+        console.log("user does not exist");
+        return res.status(404).json({
+            
+            message:"User Not Exist"
+        })
+    }
+
+    const isPasswordCorrect = bcrypt.compareSync(password,existingUser.password);
+    if(!isPasswordCorrect){
+        console.log("PASSWORD GALAT HAI");
+        return res.status(400).json({message:"Incorrect password"})
+    }
+
+    console.log("LogIn SuccessFull");
+    return res.status(201).json({message:"LogIn Successfull",user:existingUser});
+}
